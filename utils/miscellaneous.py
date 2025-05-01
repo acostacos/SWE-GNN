@@ -322,7 +322,8 @@ class SpatialAnalysis():
             
         axs[0].set_title(f'{ranking} ranking for test simulations')
         n_x_ticks = range(len(sorted_ids))
-        axs[0].boxplot(self.DEMs[sorted_ids], positions=positions)
+        # axs[0].boxplot(self.DEMs[sorted_ids], positions=positions)
+        axs[0].boxplot(self.DEMs[sorted_ids])
         axs[0].set_ylabel(r'DEM [m]')
 
         for i, (color, label) in enumerate(zip(var_colors, water_labels)):

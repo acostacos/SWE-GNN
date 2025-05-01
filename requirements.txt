@@ -1,6 +1,6 @@
 matplotlib
 networkx
-numpy
+numpy==1.26.4
 pandas
 opencv-python
 scikit_learn

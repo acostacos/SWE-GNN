@@ -1,4 +1,5 @@
 # Libraries
+import os
 import torch
 import wandb
 from wandb import Config
@@ -150,6 +151,7 @@ if __name__ == '__main__':
     # Read configuration file with parameters
     cfg = read_config('config.yaml')
 
+    os.environ["WANDB_API_KEY"] = ''
     wandb.init(
         config=cfg,
         mode='offline',

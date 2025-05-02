@@ -7,3 +7,4 @@ database/raw_datasets/*/*.txt
 wandb
 
 venv
+slurm-*.out

@@ -152,6 +152,7 @@ if __name__ == '__main__':
 
     wandb.init(
         config=cfg,
+        mode='offline',
     )
 
     fix_dict_in_config(wandb)

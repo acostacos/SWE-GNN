@@ -100,7 +100,7 @@ class Trainer(object):
 
         return losses
         
-    def fit(self, model, train_loader, val_dataset, **temporal_test_dataset_parameters):
+    def fit(self, model, train_loader, val_dataset, use_progress_bar=True, **temporal_test_dataset_parameters):
         assert isinstance(train_loader, DataLoader), "Training requires train_loader to be a Dataloader object"
 
         #start measuring training time
@@ -112,6 +112,9 @@ class Trainer(object):
                             initial=self.epoch,leave=True, 
                             bar_format='{percentage:3.0f}%|{bar:30}| '\
                             'Epoch {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {desc}')
+        if not use_progress_bar:
+            progress_bar = range(self.epoch, self.max_epochs)
+
         try:
             for _ in progress_bar:
                 self.epoch += 1
@@ -128,11 +131,16 @@ class Trainer(object):
                 # CSI validation
                 CSI_005 = self.spatial_analyser._get_CSI(water_threshold=0.05).mean()
                 CSI_03 = self.spatial_analyser._get_CSI(water_threshold=0.3).mean()
-                                
-                progress_bar.set_description(f"\tTrain loss = {train_loss:4.4f}   "\
-                                            f"Valid loss = {val_loss:1.4f}    "\
-                                            rf"CSI_0.05 = {CSI_005:.3f}"\
-                                            rf"CSI_0.3 = {CSI_03:.3f}")
+
+                log_val = f"\tTrain loss = {train_loss:4.4f}   "\
+                                                f"Valid loss = {val_loss:1.4f}    "\
+                                                rf"CSI_0.05 = {CSI_005:.3f}"\
+                                                rf"CSI_0.3 = {CSI_03:.3f}"
+
+                if use_progress_bar:
+                    progress_bar.set_description(log_val)
+                else:
+                    print(log_val)
 
                 wandb.log({"train_loss": train_loss,
                            "valid_loss": val_loss,

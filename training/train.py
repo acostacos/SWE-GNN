@@ -108,11 +108,12 @@ class Trainer(object):
         
         torch.autograd.set_detect_anomaly(True)
 
-        progress_bar = tqdm(range(self.epoch, self.max_epochs), total=self.max_epochs,
-                            initial=self.epoch,leave=True, 
-                            bar_format='{percentage:3.0f}%|{bar:30}| '\
-                            'Epoch {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {desc}')
-        if not use_progress_bar:
+        if use_progress_bar:
+            progress_bar = tqdm(range(self.epoch, self.max_epochs), total=self.max_epochs,
+                                initial=self.epoch,leave=True, 
+                                bar_format='{percentage:3.0f}%|{bar:30}| '\
+                                'Epoch {n_fmt}/{total_fmt} [{elapsed}<{remaining}] {desc}')
+        else:
             progress_bar = range(self.epoch, self.max_epochs)
 
         try:

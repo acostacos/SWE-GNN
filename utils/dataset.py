@@ -225,7 +225,7 @@ def create_data_attr(datasets, scalers=None, temporal_res=60, device='cpu', **se
 
 
 def create_model_dataset(dataset_name, train_size=100, val_prcnt=0.3, test_size=50, 
-                         dataset_folder='database\\datasets',
+                         dataset_folder='database/datasets',
                          scalers=None, seed=42, device='cpu', **dataset_parameters):
     '''
     Create dataset with scaled node and edge attributes

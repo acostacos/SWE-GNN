@@ -141,7 +141,7 @@ class Trainer(object):
                 if use_progress_bar:
                     progress_bar.set_description(log_val)
                 else:
-                    print(log_val)
+                    print(log_val, flush=True)
 
                 wandb.log({"train_loss": train_loss,
                            "valid_loss": val_loss,

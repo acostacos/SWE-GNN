@@ -8,3 +8,4 @@ wandb
 
 venv
 slurm-*.out
+.vscode

@@ -84,3 +84,13 @@ def get_facepoint_coordinates(filepath: str, perimeter_name: str = 'Perimeter 1'
     property_path = f'Geometry.2D Flow Areas.{perimeter_name}.FacePoints Coordinate'
     data = file_utils.read_hdf_file_as_numpy(filepath=filepath, property_path=property_path)
     return data.astype(dtype)
+
+def get_facecell_indexes(filepath: str, perimeter_name: str = 'Perimeter 1', dtype: np.dtype = np.int32) -> np.ndarray:
+    property_path = f'Geometry.2D Flow Areas.{perimeter_name}.Faces Cell Indexes'
+    data = file_utils.read_hdf_file_as_numpy(filepath=filepath, property_path=property_path)
+    return data.astype(dtype)
+
+def get_facepoint_indexes(filepath: str, perimeter_name: str = 'Perimeter 1', dtype: np.dtype = np.int32) -> np.ndarray:
+    property_path = f'Geometry.2D Flow Areas.{perimeter_name}.Faces FacePoint Indexes'
+    data = file_utils.read_hdf_file_as_numpy(filepath=filepath, property_path=property_path)
+    return data.astype(dtype)

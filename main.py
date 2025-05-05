@@ -115,8 +115,8 @@ def main(config):
     rollout_loss = spatial_analyser._get_rollout_loss(type_loss=trainer.type_loss)
     model_times = spatial_analyser.prediction_times
                                         
-    print('test roll loss WD:',rollout_loss.mean(0)[0].item())
-    print('test roll loss V:',rollout_loss.mean(0)[1:].mean().item())
+    print('test roll loss WD:',rollout_loss.mean(0)[0].item(), flush=True)
+    print('test roll loss V:',rollout_loss.mean(0)[1:].mean().item(), flush=True)
 
     # Speed up
     avg_speedup, std_speedup = calculate_speed_ups(numerical_times, model_times)
@@ -146,7 +146,7 @@ def main(config):
 
         wandb.log({f"{name} summary image": image})
     
-    print('Training and testing finished!')
+    print('Training and testing finished!', flush=True)
 
 if __name__ == '__main__':
     # Read configuration file with parameters

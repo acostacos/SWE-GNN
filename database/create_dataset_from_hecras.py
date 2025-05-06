@@ -8,7 +8,7 @@ from transform_helper_files.hecras_data_retrieval import get_cell_area, get_wate
     get_edge_direction_x, get_edge_direction_y, get_face_length, get_facecell_indexes, get_facepoint_indexes
 from transform_helper_files.shp_data_retrieval import get_cell_position, get_cell_elevation, get_edge_index, get_edge_length, get_edge_slope
 
-def get_cell_velocity(hec_ras_filepath: str, node_shp_filepath: str, perimeter_name: str = 'Perimeter 1') -> np.ndarray:
+def get_cell_velocity(hec_ras_filepath: str, node_shp_filepath: str, perimeter_name: str = 'Perimeter 1') -> torch.Tensor:
     '''Adopted from https://doi.org/10.26188/24312658'''
     def dist_center2faces(center_xy,faces_xy):
         dist = np.sqrt(np.square(faces_xy[:,0]-center_xy[0]) + np.square(faces_xy[:,1]-center_xy[1]))
@@ -59,7 +59,27 @@ def get_cell_velocity(hec_ras_filepath: str, node_shp_filepath: str, perimeter_n
                                                     face_length[find_faces_for_cell[:,0]] *
                                                     face_vel[:, find_faces_for_cell[:,0]] * edge_direction_y[find_faces_for_cell[:,0]], axis=1)
 
-    return cell_velocity_x, cell_velocity_y
+    return torch.FloatTensor(cell_velocity_x), torch.FloatTensor(cell_velocity_y)
+
+def get_cell_slope(hec_ras_filepath: str, edge_shp_path: str, edge_index: torch.Tensor, n_cells: int, perimeter_name: str = 'Perimeter 1') -> tuple[torch.Tensor, torch.Tensor]:
+    edge_slope = get_edge_slope(edge_shp_path)
+    edge_direction_x = get_edge_direction_x(hec_ras_filepath, perimeter_name)
+    edge_direction_y = get_edge_direction_y(hec_ras_filepath, perimeter_name)
+
+    # Compute slope in x and y directions
+    edge_slope_x = edge_slope * edge_direction_x
+    edge_slope_y = edge_slope * edge_direction_y
+
+    slope_x = np.zeros((n_cells))
+    slope_y = np.zeros((n_cells))
+    for cell_i in range(n_cells):
+        cell_edge_idx = ((edge_index[0] == cell_i) | (edge_index[1] == cell_i)).nonzero()
+
+        # Slope for each cell is the average of the slopes of the edges connected to it
+        slope_x[cell_i] = np.average(edge_slope_x[cell_edge_idx])
+        slope_y[cell_i] = np.average(edge_slope_y[cell_edge_idx])
+
+    return torch.FloatTensor(slope_x), torch.FloatTensor(slope_y)
 
 def get_edge_relative_distance(pos: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
     row, col = edge_index
@@ -79,12 +99,11 @@ def get_dataset_features(hec_ras_file_path: str, node_shp_path: str, edge_shp_pa
     # Edge Shapefile data retrieval
     edge_index = torch.LongTensor(get_edge_index(edge_shp_path))
     edge_distance = torch.FloatTensor(get_edge_length(edge_shp_path))
-    edge_slope = torch.FloatTensor(get_edge_slope(edge_shp_path))
+    slope_x, slope_y = get_cell_slope(hec_ras_file_path, edge_shp_path, edge_index, len(dem))
 
     # Convert edges to undirected
     edge_index = to_undirected(edge_index)
     edge_distance = torch.cat([edge_distance, edge_distance], dim=0)
-    edge_slope = torch.cat([edge_slope, edge_slope], dim=0)
     edge_relative_distance = get_edge_relative_distance(pos, edge_index)
 
     # Get graph features
@@ -98,8 +117,10 @@ def get_dataset_features(hec_ras_file_path: str, node_shp_path: str, edge_shp_pa
         'cell_velocity_y': cell_velocity_y,
         'dem': dem,
         'pos': pos,
+        'slope_x': slope_x,
+        'slope_y': slope_y,
         'edge_distance': edge_distance,
-        'edge_slope': edge_slope,
+        # 'edge_slope': edge_slope,
         'edge_relative_distance': edge_relative_distance,
     }
 
@@ -108,12 +129,14 @@ def convert_to_pyg(dataset_features: dict) -> Data:
 
     data.edge_index = dataset_features['edge_index']
     data.edge_distance = dataset_features['edge_distance']
-    data.edge_slope = dataset_features['edge_slope']
+    # data.edge_slope = dataset_features['edge_slope']
     data.edge_relative_distance = dataset_features['edge_relative_distance']
 
     data.num_nodes = dataset_features['num_nodes']
     data.pos = dataset_features['pos']
     data.DEM = dataset_features['dem']
+    data.slope_x = dataset_features['slope_x']
+    data.slope_y = dataset_features['slope_y']
     data.WD = dataset_features['water_depth'].T
     data.VX = dataset_features['cell_velocity_x'].T
     data.VY = dataset_features['cell_velocity_y'].T
@@ -146,16 +169,16 @@ def main():
         edge_shp_path = paths['edge_shp_path']
 
         dataset_features = get_dataset_features(hec_ras_file_path, node_shp_path, edge_shp_path)
-        print(f"Finished obtaining features for event {key}", flush=True)
+        print(f"\tFinished obtaining features for event {key}", flush=True)
         pyg_dataset = [convert_to_pyg(dataset_features)]
 
         train_keys = [k for k in dataset_keys if k != key]
         for train_key in train_keys:
-            print(f"Saving event {key} as train dataset for {train_key}", flush=True)
+            print(f"\tSaving event {key} as train dataset for {train_key}", flush=True)
             train_folder = f"{base_dataset_floder}/test_on_{train_key}/train"
             save_database(pyg_dataset, name=key, out_path=train_folder)
 
-        print(f"Saving event {key} as test dataset for {key}", flush=True)
+        print(f"\tSaving event {key} as test dataset for {key}", flush=True)
         test_folder = f"{base_dataset_floder}/test_on_{key}/test"
         save_database(pyg_dataset, name=key, out_path=test_folder)
 

@@ -39,7 +39,7 @@ def main(config):
     selected_edge_features = config.selected_edge_features
 
     train_dataset, val_dataset, test_dataset, scalers = create_model_dataset(
-        'grid', scalers=scalers, device=device, **dataset_parameters,
+        scalers=scalers, device=device, **dataset_parameters,
         **selected_node_features, **selected_edge_features
     )
 
@@ -150,7 +150,7 @@ def main(config):
 
 if __name__ == '__main__':
     # Read configuration file with parameters
-    cfg = read_config('config.yaml')
+    cfg = read_config('custom_config.yaml')
 
     wandb.init(
         config=cfg,

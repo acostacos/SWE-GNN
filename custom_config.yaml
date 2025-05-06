@@ -1,11 +1,11 @@
 # dataset creation parameters
 dataset_parameters:
-  dataset_name: 'grid'
-  database_folder: 'database/datasets'  # datasets location
-  temporal_res: 60      # temporal resolution
-  train_size: 80        # training set size
-  val_prcnt: 0.25       # percentage of validation sample from training dataset
-  test_size: 10         # choose from: value(1,20), 'random_breach', 'big'
+  dataset_name: ['initp02', 'initp03', 'initp04']
+  dataset_folder: 'database/hecras_datasets/test_on_initp01'  # datasets location
+  temporal_res: 30      # temporal resolution
+  train_size: 1         # training set size
+  val_prcnt: 0.1        # percentage of validation sample from training dataset
+  test_size: 'initp01'  # choose from: value(1,20), 'random_breach', 'big'
   seed: 111             # seed for randomness in training/validation split
 
 # Scaler options: null, 'minmax', 'minmax_neg', or 'standard'
@@ -20,7 +20,7 @@ scalers:
 selected_node_features : 
   slope_x       : True    # slope in x-direction
   slope_y       : True    # slope in y-direction
-  area          : False   # cell area
+  area          : True    # cell area
   DEM           : True    # cell elevation
 
 # edge features

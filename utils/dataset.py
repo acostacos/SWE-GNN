@@ -79,8 +79,11 @@ def get_node_features(data=None, scalers=None, slope_x=True, slope_y=True,
         }
 
     if slope_x or slope_y:
-        number_grids = int(data.DEM.shape[0]**0.5)
-        slopex, slopey = slopes_from_DEM(data.DEM.reshape(number_grids, number_grids))
+        if hasattr(data, 'slope_x') and hasattr(data, 'slope_y'):
+            slopex, slopey = data.slope_x, data.slope_y
+        else:
+            number_grids = int(data.DEM.shape[0]**0.5)
+            slopex, slopey = slopes_from_DEM(data.DEM.reshape(number_grids, number_grids))
 
         if slope_x:
             node_features['slope_x'] = process_attr(slopex, scaler=scalers['slope_scaler'], device=device)
@@ -251,13 +254,22 @@ def create_model_dataset(dataset_name, train_size=100, val_prcnt=0.3, test_size=
             selects the desired time step for the temporal resolution
     '''
     # Load datasets
-    train_dataset = load_dataset(dataset_name, train_size, seed, dataset_folder+'/train')
+    if isinstance(dataset_name, list):
+        train_dataset = []
+        for name in dataset_name:
+            dataset = load_dataset(name, train_size, seed, dataset_folder+'/train')
+            train_dataset.extend(dataset)
+    else:
+        train_dataset = load_dataset(dataset_name, train_size, seed, dataset_folder+'/train')
+
     # create validation dataset from training
     train_dataset, val_dataset = train_test_split(train_dataset, test_size=val_prcnt, random_state=seed)
     if test_size == 'big' or test_size == 'big_random_breach':
         test_dataset = load_dataset('big_random_breach_grid', 10, seed=0, dataset_folder=dataset_folder+'/test')
     elif test_size == 'random_breach':
         test_dataset = load_dataset('random_breach_grid', 20, seed=0, dataset_folder=dataset_folder+'/test')
+    elif isinstance(test_size, str):
+        test_dataset = load_dataset(test_size, 1, seed=0, dataset_folder=dataset_folder+'/test')
     else:
         test_dataset = load_dataset(dataset_name, test_size, seed=0, dataset_folder=dataset_folder+'/test')
     

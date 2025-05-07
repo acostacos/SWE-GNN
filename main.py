@@ -7,6 +7,7 @@ import PIL, cv2
 import torch.optim as optim
 from torch_geometric.loader import DataLoader
 
+from argparse import ArgumentParser
 from utils.dataset import create_model_dataset, to_temporal_dataset
 from utils.dataset import get_temporal_test_dataset_parameters
 from utils.load import read_config
@@ -150,7 +151,12 @@ def main(config):
 
 if __name__ == '__main__':
     # Read configuration file with parameters
-    cfg = read_config('custom_config.yaml')
+    parser = ArgumentParser(description='')
+    parser.add_argument("--config", type=str, default='config.yaml', help='Config file path')
+    args = parser.parse_args()
+
+    print('Reading config file: ', args.config, flush=True)
+    cfg = read_config(args.config)
 
     wandb.init(
         config=cfg,

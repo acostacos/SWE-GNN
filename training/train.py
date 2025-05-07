@@ -65,6 +65,8 @@ class Trainer(object):
         
         charge_bar = tqdm(train_loader, leave=bar_freq, disable=True)
         for batch in charge_bar:
+            batch = batch.to(self.device)
+
             # reset gradients
             self.optimizer.zero_grad()
 
@@ -230,4 +232,4 @@ class Trainer(object):
             self.best_model = deepcopy(model.state_dict())
 
     def _get_spatial_analysis(self, model, val_dataset, **temporal_test_dataset_parameters):
-        self.spatial_analyser = SpatialAnalysis(model, val_dataset, **temporal_test_dataset_parameters)
+        self.spatial_analyser = SpatialAnalysis(model, val_dataset, self.device, **temporal_test_dataset_parameters)

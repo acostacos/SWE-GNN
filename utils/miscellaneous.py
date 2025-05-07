@@ -190,9 +190,10 @@ def get_pareto_front(df, objective_function1, objective_function2, ascending=Fal
     return pareto_front
 
 class SpatialAnalysis():
-    def __init__(self, model, dataset, **temporal_test_dataset_parameters):
+    def __init__(self, model, dataset, device=None, **temporal_test_dataset_parameters):
         '''This class saves model predictions and real values and provides tools to analyse them'''
         self.dataset = dataset
+        self.device = device
         self.time_start = temporal_test_dataset_parameters['time_start']
         self.time_stop = temporal_test_dataset_parameters['time_stop']
         self.time_vector = get_time_vector(dataset, self.time_stop)
@@ -203,12 +204,12 @@ class SpatialAnalysis():
 
     def _get_rollouts(self, model, dataset, **temporal_test_dataset_parameters):
         if isinstance(dataset, list):
-            all_rollouts = [get_rollouts(model, data, **temporal_test_dataset_parameters) for data in dataset]
+            all_rollouts = [get_rollouts(model, data, self.device, **temporal_test_dataset_parameters) for data in dataset]
             predicted_rollout = torch.stack([roll[0] for roll in all_rollouts])
             real_rollout = torch.stack([roll[1] for roll in all_rollouts])
             prediction_times = np.array([roll[2] for roll in all_rollouts])
         else:
-            predicted_rollout, real_rollout, prediction_times = get_rollouts(model, dataset, **temporal_test_dataset_parameters)
+            predicted_rollout, real_rollout, prediction_times = get_rollouts(model, dataset, self.device, **temporal_test_dataset_parameters)
             predicted_rollout = predicted_rollout.unsqueeze(0)
             real_rollout = real_rollout.unsqueeze(0)
             prediction_times = prediction_times

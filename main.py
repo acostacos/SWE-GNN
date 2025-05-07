@@ -40,7 +40,7 @@ def main(config):
     selected_edge_features = config.selected_edge_features
 
     train_dataset, val_dataset, test_dataset, scalers = create_model_dataset(
-        scalers=scalers, device=device, **dataset_parameters,
+        scalers=scalers, device='cpu', **dataset_parameters,
         **selected_node_features, **selected_edge_features
     )
 
@@ -101,7 +101,7 @@ def main(config):
     wandb.log({"total parameters": total_parameteres})
 
     # Training
-    trainer = Trainer(optimizer, lr_scheduler, **trainer_options)
+    trainer = Trainer(optimizer, lr_scheduler, device=device, **trainer_options)
     trainer.fit(model, train_loader, val_dataset, use_progress_bar=False, **temporal_test_dataset_parameters)
     trainer._save_model(model, model_name=f'{wandb.run.id}.h5')
 

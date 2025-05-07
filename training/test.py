@@ -41,10 +41,13 @@ def rollout_test(model, dataset, **temporal_test_dataset_parameters):
     
     return rollout
 
-def get_rollouts(model, dataset, **temporal_test_dataset_parameters):
+def get_rollouts(model, dataset, device=None, **temporal_test_dataset_parameters):
     time_start = temporal_test_dataset_parameters['time_start']
     time_stop = temporal_test_dataset_parameters['time_stop']
-    device = dataset.x.device
+    if device is None:
+        device = dataset.x.device
+    else:
+        dataset = dataset.to(device)
 
     start_time = time.time()
     predicted_rollout = rollout_test(model, dataset, **temporal_test_dataset_parameters).to(device)

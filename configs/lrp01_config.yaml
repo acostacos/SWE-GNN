@@ -4,7 +4,7 @@ dataset_parameters:
   dataset_folder: 'database/hecras_datasets/lr/test_on_lrp01'  # datasets location
   temporal_res: 30      # temporal resolution
   train_size: 1         # training set size
-  val_prcnt: 0.1        # percentage of validation sample from training dataset
+  val_prcnt: 0          # percentage of validation sample from training dataset
   test_size: 'lrp01'    # choose from: value(1,20), 'random_breach', 'big'
   seed: 42              # seed for randomness in training/validation split
 

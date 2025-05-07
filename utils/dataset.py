@@ -263,7 +263,11 @@ def create_model_dataset(dataset_name, train_size=100, val_prcnt=0.3, test_size=
         train_dataset = load_dataset(dataset_name, train_size, seed, dataset_folder+'/train')
 
     # create validation dataset from training
-    train_dataset, val_dataset = train_test_split(train_dataset, test_size=val_prcnt, random_state=seed)
+    if val_prcnt > 0:
+        train_dataset, val_dataset = train_test_split(train_dataset, test_size=val_prcnt, random_state=seed)
+    else:
+        val_dataset = []
+
     if test_size == 'big' or test_size == 'big_random_breach':
         test_dataset = load_dataset('big_random_breach_grid', 10, seed=0, dataset_folder=dataset_folder+'/test')
     elif test_size == 'random_breach':
@@ -278,9 +282,10 @@ def create_model_dataset(dataset_name, train_size=100, val_prcnt=0.3, test_size=
     
     # Create x, edge_attr, y
     train_dataset = create_data_attr(train_dataset, scalers=scalers, device=device, **dataset_parameters)
-    val_dataset = create_data_attr(val_dataset, scalers=scalers, device=device, **dataset_parameters)
+    if len(val_dataset) > 0:
+        val_dataset = create_data_attr(val_dataset, scalers=scalers, device=device, **dataset_parameters)
     test_dataset = create_data_attr(test_dataset, scalers=scalers, device=device, **dataset_parameters)
-    
+
     return train_dataset, val_dataset, test_dataset, scalers
 
 def aggregate_WD_V(WD, V, init_time):

@@ -105,6 +105,8 @@ class Trainer(object):
     def fit(self, model, train_loader, val_dataset, use_progress_bar=True, **temporal_test_dataset_parameters):
         assert isinstance(train_loader, DataLoader), "Training requires train_loader to be a Dataloader object"
 
+        has_val_dataset = val_dataset is not None and len(val_dataset) > 0
+
         #start measuring training time
         start_time = time.time()
         
@@ -124,53 +126,57 @@ class Trainer(object):
 
                 # Model training
                 train_loss = self._training_step(model, train_loader, **self.training_options)
-                
-                # spatial validation
-                self._get_spatial_analysis(model, val_dataset, **temporal_test_dataset_parameters)
 
-                # Model validation
-                val_loss = self.spatial_analyser._get_rollout_loss(type_loss=self.type_loss).mean()
+                log_val = f"\tTrain loss = {train_loss:4.4f}"
+                wandb_log_val = {"train_loss": train_loss}
 
-                # CSI validation
-                CSI_005 = self.spatial_analyser._get_CSI(water_threshold=0.05).mean()
-                CSI_03 = self.spatial_analyser._get_CSI(water_threshold=0.3).mean()
+                self.train_losses.append(train_loss)
 
-                log_val = f"\tTrain loss = {train_loss:4.4f}   "\
-                                                f"Valid loss = {val_loss:1.4f}    "\
-                                                rf"CSI_0.05 = {CSI_005:.3f}"\
-                                                rf"CSI_0.3 = {CSI_03:.3f}"
+                if has_val_dataset:
+                    # spatial validation
+                    self._get_spatial_analysis(model, val_dataset, **temporal_test_dataset_parameters)
+
+                    # Model validation
+                    val_loss = self.spatial_analyser._get_rollout_loss(type_loss=self.type_loss).mean()
+
+                    # CSI validation
+                    CSI_005 = self.spatial_analyser._get_CSI(water_threshold=0.05).mean()
+                    CSI_03 = self.spatial_analyser._get_CSI(water_threshold=0.3).mean()
+
+                    log_val += f"\tValid loss = {val_loss:1.4f}"\
+                        rf"CSI_0.05 = {CSI_005:.3f}"\
+                        rf"CSI_0.3 = {CSI_03:.3f}"
+                    wandb_log_val.update({"valid_loss": val_loss,
+                                          r"CSI_0.05": CSI_005,
+                                          r"CSI_0.3": CSI_03})
+
+                    self.val_losses.append(val_loss) 
+                    self.CSI_005.append(CSI_005) 
+                    self.CSI_03.append(CSI_03) 
 
                 if use_progress_bar:
                     progress_bar.set_description(log_val)
                 else:
                     print(f"Epoch: {self.epoch}\n", log_val, flush=True)
+                wandb.log(wandb_log_val)
 
-                wandb.log({"train_loss": train_loss,
-                           "valid_loss": val_loss,
-                           r"CSI_0.05": CSI_005,
-                           r"CSI_0.3": CSI_03})
-
-                self.train_losses.append(train_loss)
-                self.val_losses.append(val_loss) 
-                self.CSI_005.append(CSI_005) 
-                self.CSI_03.append(CSI_03) 
-                
                 self._use_learning_rate_scheduler()
-                self._update_best_model(model)
+                self._update_best_model(model, has_val_dataset)
                 if self._early_stopping():
                     break
         except KeyboardInterrupt:
             self.epoch -= 1
-            
+
         self.training_time = time.time() - start_time
 
-        min_val_loss = torch.tensor(self.val_losses).min()
-        argmin_val_loss = torch.tensor(self.val_losses).argmin()
-
-        wandb.log({"training_time": self.training_time,
-                   "valid_loss": min_val_loss,
+        final_wandb_log = {"training_time": self.training_time}
+        if has_val_dataset:
+            min_val_loss = torch.tensor(self.val_losses).min()
+            argmin_val_loss = torch.tensor(self.val_losses).argmin()
+            final_wandb_log.update({"valid_loss": min_val_loss,
                    r"CSI_0.05": self.CSI_005[argmin_val_loss],
                    r"CSI_0.3": self.CSI_03[argmin_val_loss]})
+        wandb.log(final_wandb_log)
 
         try:
             print("Loading best model...")
@@ -225,10 +231,13 @@ class Trainer(object):
         if self.lr_scheduler is not None:
             self.lr_scheduler.step()
 
-    def _update_best_model(self, model):
+    def _update_best_model(self, model, has_val_dataset):
         '''Saves the model with best validation loss'''
-        if self.val_losses[-1] < self.best_val_loss:
-            self.best_val_loss = self.val_losses[-1]
+        if has_val_dataset:
+            if self.val_losses[-1] < self.best_val_loss:
+                self.best_val_loss = self.val_losses[-1]
+                self.best_model = deepcopy(model.state_dict())
+        else:
             self.best_model = deepcopy(model.state_dict())
 
     def _get_spatial_analysis(self, model, val_dataset, **temporal_test_dataset_parameters):

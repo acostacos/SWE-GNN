@@ -72,7 +72,7 @@ trainer_options:
   velocity_scaler   : 3             # weighting coefficient for velocity in loss (eq. 14)
   curriculum_epoch  : 15            # number of epochs before updating curriculum strategy
   patience          : 30            # patience for early stopping
-  max_epochs        : 150           # maximum number of epochs
+  max_epochs        : 10            # maximum number of epochs
   report_freq       : 5             # frquency to report loss in print
 
 # learning rate (optimizer parameters)

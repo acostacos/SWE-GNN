@@ -121,6 +121,7 @@ class Trainer(object):
             progress_bar = range(self.epoch, self.max_epochs)
 
         try:
+            start_epoch_time = time.time()
             for _ in progress_bar:
                 self.epoch += 1
 
@@ -159,6 +160,9 @@ class Trainer(object):
                 else:
                     print(f"Epoch: {self.epoch}\n", log_val, flush=True)
                 wandb.log(wandb_log_val)
+
+                print(f"Epoch time: {time.time()-start_epoch_time:.2f}s", flush=True)
+                self._print_memory_usage(self.epoch)
 
                 self._use_learning_rate_scheduler()
                 self._update_best_model(model, has_val_dataset)
@@ -242,3 +246,18 @@ class Trainer(object):
 
     def _get_spatial_analysis(self, model, val_dataset, **temporal_test_dataset_parameters):
         self.spatial_analyser = SpatialAnalysis(model, val_dataset, self.device, **temporal_test_dataset_parameters)
+
+    def _print_memory_usage(self, epoch: int):
+        def bytes_to_gb(b: float) -> float:
+            return round(b / (1024 ** 3), 2)
+
+        print(f'Usage Statistics (epoch {epoch+1}): ', flush=True)
+        gpu_usage = torch.cuda.mem_get_info()
+        free = bytes_to_gb(gpu_usage[0])
+        total = bytes_to_gb(gpu_usage[1])
+        print(f"\tGPU Usage: {free}GB / {total}GB", flush=True)
+
+        gpu_allocated = torch.cuda.memory_allocated()
+        gpu_cached = torch.cuda.memory_reserved()
+        print(f"\tCUDA GPU Allocated: {bytes_to_gb(gpu_allocated)}GB", flush=True)
+        print(f"\tCUDA GPU Cached: {bytes_to_gb(gpu_cached)}GB", flush=True)

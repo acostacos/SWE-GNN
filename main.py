@@ -106,46 +106,46 @@ def main(config):
     trainer._save_model(model, model_name=f'{wandb.run.id}.h5')
 
     # Numerical simulation times
-    maximum_time = test_dataset[0].WD.shape[1]
-    numerical_times = get_numerical_times(test_size, temporal_res, maximum_time, 
-                    **temporal_test_dataset_parameters,
-                    overview_file='database/raw_datasets/overview.csv')
+    # maximum_time = test_dataset[0].WD.shape[1]
+    # numerical_times = get_numerical_times(test_size, temporal_res, maximum_time, 
+    #                 **temporal_test_dataset_parameters,
+    #                 overview_file='database/raw_datasets/overview.csv')
 
     # Rollout error and time
-    spatial_analyser = SpatialAnalysis(model, test_dataset, **temporal_test_dataset_parameters)
-    rollout_loss = spatial_analyser._get_rollout_loss(type_loss=trainer.type_loss)
-    model_times = spatial_analyser.prediction_times
+    # spatial_analyser = SpatialAnalysis(model, test_dataset, **temporal_test_dataset_parameters)
+    # rollout_loss = spatial_analyser._get_rollout_loss(type_loss=trainer.type_loss)
+    # model_times = spatial_analyser.prediction_times
                                         
-    print('test roll loss WD:',rollout_loss.mean(0)[0].item(), flush=True)
-    print('test roll loss V:',rollout_loss.mean(0)[1:].mean().item(), flush=True)
+    # print('test roll loss WD:',rollout_loss.mean(0)[0].item(), flush=True)
+    # print('test roll loss V:',rollout_loss.mean(0)[1:].mean().item(), flush=True)
 
     # Speed up
-    avg_speedup, std_speedup = calculate_speed_ups(numerical_times, model_times)
+    # avg_speedup, std_speedup = calculate_speed_ups(numerical_times, model_times)
 
-    wandb.log({"speed-up": avg_speedup,
-               "test roll loss WD":rollout_loss.mean(0)[0].item(),
-               "test roll loss V":rollout_loss.mean(0)[1:].mean().item()})
+    # wandb.log({"speed-up": avg_speedup,
+    #            "test roll loss WD":rollout_loss.mean(0)[0].item(),
+    #            "test roll loss V":rollout_loss.mean(0)[1:].mean().item()})
 
-    spatial_analyser = SpatialAnalysis(model, test_dataset, **temporal_test_dataset_parameters)
+    # spatial_analyser = SpatialAnalysis(model, test_dataset, **temporal_test_dataset_parameters)
 
-    fig, _ = spatial_analyser.plot_CSI_rollouts(water_thresholds=[0.05, 0.3])
-    fig.savefig("results/temp_CSI.png")
-    img = cv2.imread("results/temp_CSI.png")
-    image = wandb.Image(PIL.Image.fromarray(img), caption="CSI scores")
-    wandb.log({"CSI scores": image})
+    # fig, _ = spatial_analyser.plot_CSI_rollouts(water_thresholds=[0.05, 0.3])
+    # fig.savefig("results/temp_CSI.png")
+    # img = cv2.imread("results/temp_CSI.png")
+    # image = wandb.Image(PIL.Image.fromarray(img), caption="CSI scores")
+    # wandb.log({"CSI scores": image})
 
-    best_id = rollout_loss.mean(1).argmin().item()
-    worst_id = rollout_loss.mean(1).argmax().item()
+    # best_id = rollout_loss.mean(1).argmin().item()
+    # worst_id = rollout_loss.mean(1).argmax().item()
     
-    for id_dataset, name in zip([best_id, worst_id],['best', 'worst']):
-        rollout_plotter = PlotRollout(model, test_dataset[id_dataset], scalers=scalers, 
-            type_loss=trainer.type_loss, **temporal_test_dataset_parameters)
-        fig = rollout_plotter.explore_rollout()
-        fig.savefig("results/temp_summary.png")
-        img = cv2.imread("results/temp_summary.png")
-        image = wandb.Image(PIL.Image.fromarray(img), caption=f"id: {id_dataset}")
+    # for id_dataset, name in zip([best_id, worst_id],['best', 'worst']):
+    #     rollout_plotter = PlotRollout(model, test_dataset[id_dataset], scalers=scalers, 
+    #         type_loss=trainer.type_loss, **temporal_test_dataset_parameters)
+    #     fig = rollout_plotter.explore_rollout()
+    #     fig.savefig("results/temp_summary.png")
+    #     img = cv2.imread("results/temp_summary.png")
+    #     image = wandb.Image(PIL.Image.fromarray(img), caption=f"id: {id_dataset}")
 
-        wandb.log({f"{name} summary image": image})
+    #     wandb.log({f"{name} summary image": image})
     
     print('Training and testing finished!', flush=True)
 

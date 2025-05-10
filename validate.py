@@ -96,16 +96,10 @@ def main(config, model_path: str, output_path: str):
 if __name__ == '__main__':
     # Read configuration file with parameters
     parser = ArgumentParser(description='')
-    # parser.add_argument("--model_path", type=str, required=True, help='Path to model to be validated')
-    # parser.add_argument("--output_path", type=str, required=True, help='Path to numpy file to be saved')
-    parser.add_argument("--model_path", type=str, help='Path to model to be validated')
-    parser.add_argument("--output_path", type=str, help='Path to model to be validated')
+    parser.add_argument("--model_path", type=str, required=True, help='Path to model to be validated')
+    parser.add_argument("--output_path", type=str, required=True, help='Path to numpy file to be saved')
     parser.add_argument("--config", type=str, default='config.yaml', help='Config file path')
     args = parser.parse_args()
-
-    args.config = 'configs/initp01_config.yaml'
-    args.model_path = 'wandb/offline-run-20250510_150831-9ykal8dx/files/9ykal8dx.h5'
-    args.output_path = 'saved_metrics/initp01.npz'
 
     print('Reading config file: ', args.config, flush=True)
     cfg = read_config(args.config)

@@ -65,8 +65,6 @@ class Trainer(object):
         
         charge_bar = tqdm(train_loader, leave=bar_freq, disable=True)
         for batch in charge_bar:
-            batch = batch.to(self.device)
-
             # reset gradients
             self.optimizer.zero_grad()
 
@@ -74,7 +72,7 @@ class Trainer(object):
             
             rollout_steps = self._get_rollout_steps(curriculum_epoch, batch)
 
-            temp = batch.clone()
+            temp = batch.clone().to(self.device)
 
             for i in range(rollout_steps):
                 # Model prediction
@@ -98,7 +96,7 @@ class Trainer(object):
 
             charge_bar.set_description(f"Epoch {self.epoch}  Loss={loss.item():4.4f}")
 
-        losses = torch.stack(losses).mean().item()
+        losses = torch.stack(losses).mean().cpu().item()
 
         return losses
         
@@ -162,7 +160,7 @@ class Trainer(object):
                 wandb.log(wandb_log_val)
 
                 print(f"Epoch time: {time.time()-start_epoch_time:.2f}s", flush=True)
-                self._print_memory_usage(self.epoch)
+                self._print_memory_usage(self.epoch - 1)
 
                 self._use_learning_rate_scheduler()
                 self._update_best_model(model, has_val_dataset)
@@ -251,7 +249,7 @@ class Trainer(object):
         def bytes_to_gb(b: float) -> float:
             return round(b / (1024 ** 3), 2)
 
-        print(f'Usage Statistics (epoch {epoch+1}): ', flush=True)
+        print(f'Usage Statistics (Epoch {epoch+1}): ', flush=True)
         gpu_usage = torch.cuda.mem_get_info()
         free = bytes_to_gb(gpu_usage[0])
         total = bytes_to_gb(gpu_usage[1])

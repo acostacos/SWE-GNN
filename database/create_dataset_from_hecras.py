@@ -93,7 +93,7 @@ def get_dataset_features(hec_ras_file_path: str, node_shp_path: str, edge_shp_pa
 
     # Node Shapefile data retrieval
     dem = torch.FloatTensor(get_cell_elevation(node_shp_path))
-    water_depth = water_level - dem
+    water_depth = torch.clip(water_level - dem, min=0)
     pos = torch.FloatTensor(get_cell_position(node_shp_path))
 
     # Edge Shapefile data retrieval

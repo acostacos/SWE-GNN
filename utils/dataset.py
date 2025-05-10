@@ -312,7 +312,7 @@ def get_next_steps(aggregate_function, init_time, rollout_steps, *water_variable
 def add_dry_bed_condition(variable, previous_t):
     '''Add blank previous time steps (dry bed conditions)'''
     num_nodes = variable.shape[0]
-    return torch.cat((torch.zeros(num_nodes, previous_t-1), variable), 1)
+    return torch.cat((torch.zeros(num_nodes, previous_t-1, device=variable.device), variable), 1)
 
 def get_node_feature_matrix(x, prev_steps, with_x=True):
     '''Return tensor used as node feature matrix X

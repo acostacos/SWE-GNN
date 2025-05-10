@@ -10,3 +10,4 @@ venv
 slurm-*.out
 .vscode
 results/personal_tests/
+database/hecras_datasets

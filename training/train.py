@@ -166,10 +166,6 @@ class Trainer(object):
                 self._update_best_model(model, has_val_dataset)
                 if self._early_stopping():
                     break
-
-                import gc
-                gc.collect()
-                torch.cuda.empty_cache()
         except KeyboardInterrupt:
             self.epoch -= 1
 

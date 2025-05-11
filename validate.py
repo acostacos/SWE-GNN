@@ -1,6 +1,5 @@
 # Libraries
 import torch
-import numpy as np
 
 from argparse import ArgumentParser
 from utils.dataset import create_model_dataset, to_temporal_dataset
@@ -71,8 +70,8 @@ def main(config, model_path: str, output_path: str):
     validation_stats.print_stats_summary()
 
     # Prediction time
-    average_pred_time = np.mean(spatial_analyser.prediction_times)
-    print(f'Inference time for one timestep: {average_pred_time} seconds', flush=True)
+    inference_pred_time = spatial_analyser.prediction_times[0] / n_timesteps
+    print(f'Inference time for one timestep: {inference_pred_time:4f} seconds', flush=True)
 
     validation_stats.save_stats(output_path)
 

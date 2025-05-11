@@ -171,6 +171,7 @@ class Trainer(object):
 
         self.training_time = time.time() - start_time
 
+        print(f"Training time: {self.training_time:.4f}s", flush=True)
         final_wandb_log = {"training_time": self.training_time}
         if has_val_dataset:
             min_val_loss = torch.tensor(self.val_losses).min()

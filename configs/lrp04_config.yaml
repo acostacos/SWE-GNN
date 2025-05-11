@@ -69,7 +69,7 @@ models:
 trainer_options:
   type_loss         : 'RMSE'        # 'RMSE' or 'MAE'
   only_where_water  : True          # Calculate loss only where there's water
-  batch_size        : 8             # batch size
+  batch_size        : 1             # batch size
   velocity_scaler   : 3             # weighting coefficient for velocity in loss (eq. 14)
   curriculum_epoch  : 1            # number of epochs before updating curriculum strategy
   patience          : 30            # patience for early stopping

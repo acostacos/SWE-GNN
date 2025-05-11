@@ -16,9 +16,9 @@ def NSE(pred: Tensor, target: Tensor) -> Tensor:
     return 1 - (model_sse / mean_model_sse)
 
 def CSI(binary_pred: Tensor, binary_target: Tensor):
-    TP = (binary_pred & binary_target).sum(dim=0) #true positive
-    # TN = (~binary_pred & ~binary_target).sum(dim=0) #true negative
-    FP = (binary_pred & ~binary_target).sum(dim=0) #false positive
-    FN = (~binary_pred & binary_target).sum(dim=0) #false negative
+    TP = (binary_pred & binary_target).sum() #true positive
+    # TN = (~binary_pred & ~binary_target).sum() #true negative
+    FP = (binary_pred & ~binary_target).sum() #false positive
+    FN = (~binary_pred & binary_target).sum() #false negative
 
     return TP / (TP + FN + FP)

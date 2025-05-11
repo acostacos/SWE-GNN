@@ -66,18 +66,6 @@ class ValidationStats:
         binary_flooded_target = binary_target[flooded_mask]
         self.csi_flooded_list.append(CSI(binary_flooded_pred, binary_flooded_target))
 
-    def convert_water_level_to_water_depth(self, pred: Tensor, target: Tensor, elevation: Tensor):
-        if self.data_is_normalized:
-            pred = self.denormalize_func('water_level', pred)
-            target = self.denormalize_func('water_level', target)
-            elevation = self.denormalize_func('elevation', elevation)
-
-        # water_depth_pred = relu(pred - elevation) # Ensure water depth is non-negative
-        water_depth_pred = pred - elevation
-        water_depth_target = target - elevation
-
-        return water_depth_pred, water_depth_target
-    
     def convert_water_depth_to_binary(self, water_level: Tensor, water_threshold: float) -> Tensor:
         return (water_level > water_threshold)
 

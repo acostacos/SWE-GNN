@@ -119,8 +119,8 @@ class Trainer(object):
             progress_bar = range(self.epoch, self.max_epochs)
 
         try:
-            start_epoch_time = time.time()
             for _ in progress_bar:
+                start_epoch_time = time.time()
                 self.epoch += 1
 
                 # Model training

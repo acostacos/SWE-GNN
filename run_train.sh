@@ -9,7 +9,7 @@
 . venv/bin/activate
 
 echo "========== lrp01 =========="
-#srun python main.py --config 'configs/lrp01_config.yaml'
+srun python main.py --config 'configs/lrp01_config.yaml'
 
 echo "========== lrp04 =========="
 srun python main.py --config 'configs/lrp04_config.yaml'

@@ -61,8 +61,8 @@ def main(config, model_path: str, output_path: str):
     WATER_DEPTH_IDX = 0
     n_timesteps = spatial_analyser.predicted_rollout.shape[3]
     for i in range(n_timesteps):
-        water_depth_pred = spatial_analyser.predicted_rollout[DATASET_IDX, :, WATER_DEPTH_IDX, i]
-        water_depth_target = spatial_analyser.real_rollout[DATASET_IDX, :, WATER_DEPTH_IDX, i]
+        water_depth_pred = spatial_analyser.predicted_rollout[DATASET_IDX, :, WATER_DEPTH_IDX, i].unsqueeze(-1)
+        water_depth_target = spatial_analyser.real_rollout[DATASET_IDX, :, WATER_DEPTH_IDX, i].unsqueeze(-1)
         validation_stats.update_stats_for_epoch(water_depth_pred.cpu(),
                                                 water_depth_target.cpu(),
                                                 water_threshold=0.05)

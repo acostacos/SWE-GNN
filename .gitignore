@@ -12,3 +12,4 @@ slurm-*.out
 results/personal_tests/
 database/hecras_datasets
 saved_metrics/
+slurm_logs/

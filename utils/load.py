@@ -26,8 +26,8 @@ def load_dataset(dataset_name, size, seed=42, dataset_folder='database/datasets'
     size: int
         number of simulations selected
     '''
-    if size > 80:
-        raise FileNotFoundError('maximum training dataset size is 80')
+    # if size > 80:
+    #     raise FileNotFoundError('maximum training dataset size is 80')
         
     path = f"{dataset_folder}/{dataset_name}.pkl"
     

@@ -1,7 +1,7 @@
 # dataset creation parameters
 dataset_parameters:
   dataset_name: ['initp01', 'initp02', 'initp03']
-  dataset_folder: 'database/hecras_datasets/test_on_initp04'  # datasets location
+  dataset_folder: 'database/hecras_datasets/init/test_on_initp04'  # datasets location
   temporal_res: 30      # temporal resolution
   train_size: 1         # training set size
   val_prcnt: 0          # percentage of validation sample from training dataset

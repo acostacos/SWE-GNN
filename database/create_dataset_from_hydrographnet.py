@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import torch
 
 from tqdm import tqdm
 from typing import Optional, Union
@@ -90,6 +91,8 @@ def load_dynamic_data(folder: str, hydrograph_id: str, prefix: str,
     volume = volume[:peak_time_idx + 25]
     precipitation = precipitation[:peak_time_idx + 25] * 2.7778e-7  # Unit conversion
     inflow_hydrograph = inflow_hydrograph[:peak_time_idx + 25]
+    # Make sure water depth is non-negative.
+    water_depth = np.clip(water_depth, a_min=0, a_max=None)
     return water_depth, inflow_hydrograph, volume, precipitation, velocity_x, velocity_y
 
 def normalize(data: np.ndarray, mean: Union[float, list, np.ndarray],
@@ -106,7 +109,6 @@ def denormalize(data: np.ndarray, mean: Union[float, list, np.ndarray],
 
 def process_dataset(data_dir: str,
                  prefix: str = 'M80',
-                 n_time_steps: int = 2,
                  k: int = 4,
                  hydrograph_ids_file: Optional[str] = None,
                  split: str = "train",
@@ -160,6 +162,12 @@ def process_dataset(data_dir: str,
     for hid in tqdm(hydrograph_ids, desc="Processing Hydrographs"):
         water_depth, inflow_hydrograph, volume, precipitation, velocity_x, velocity_y = load_dynamic_data(
             data_dir, hid, prefix, num_points=num_nodes)
+
+        if split != "train":
+            water_depth = water_depth[:rollout_length]
+            velocity_x = velocity_x[:rollout_length]
+            velocity_y = velocity_y[:rollout_length]
+
         temp_dynamic_data.append({
             "water_depth": water_depth,
             "velocity_x": velocity_x,
@@ -201,6 +209,14 @@ def process_dataset(data_dir: str,
             "hydro_id": dyn["hydro_id"],
         }
         dynamic_data.append(dyn_std)
+    
+    if split == "test":
+        for h_idx, dyn in enumerate(dynamic_data):
+            T = dyn["water_depth"].shape[0]
+            if T < rollout_length:
+                raise ValueError(
+                    f"Hydrograph {dyn['hydro_id']} does not have enough time steps for the specified rollout_length."
+                )
 
     return {
         'hydrograph_ids': hydrograph_ids,
@@ -220,18 +236,18 @@ def process_dataset(data_dir: str,
 def convert_to_pyg(dataset_features: dict) -> Data:
     data = Data()
 
-    data.edge_index = dataset_features['edge_index']
-    data.edge_distance = dataset_features['edge_distance']
-    data.edge_relative_distance = dataset_features['edge_relative_distance']
+    data.edge_index = torch.LongTensor(dataset_features['edge_index'])
+    data.edge_distance = torch.FloatTensor(dataset_features['edge_distance'])
+    data.edge_relative_distance = torch.FloatTensor(dataset_features['edge_relative_distance'])
 
     data.num_nodes = dataset_features['num_nodes']
-    data.pos = dataset_features['pos']
-    data.DEM = dataset_features['dem']
-    data.slope_x = dataset_features['slope_x']
-    data.slope_y = dataset_features['slope_y']
-    data.WD = dataset_features['water_depth'].T
-    data.VX = dataset_features['cell_velocity_x'].T
-    data.VY = dataset_features['cell_velocity_y'].T
+    data.pos = torch.FloatTensor(dataset_features['pos'])
+    data.DEM = torch.FloatTensor(dataset_features['dem'])
+    data.slope_x = torch.FloatTensor(dataset_features['slope_x'])
+    data.slope_y = torch.FloatTensor(dataset_features['slope_y'])
+    data.WD = torch.FloatTensor(dataset_features['water_depth'].T)
+    data.VX = torch.FloatTensor(dataset_features['cell_velocity_x'].T)
+    data.VY = torch.FloatTensor(dataset_features['cell_velocity_y'].T)
 
     return data
 
@@ -240,7 +256,6 @@ def main():
     dataset_folder = "hydrographnet_datasets"
     prefix = "M80"
     k = 4
-    n_time_steps = 2
     num_val_timesteps = 30
     train_ids_file = '0_train.txt'
     test_ids_file = '0_test.txt'
@@ -252,7 +267,6 @@ def main():
     train_processed = process_dataset(
         data_dir=hydrographnet_data_folder,
         prefix=prefix,
-        n_time_steps=n_time_steps,
         k=k,
         hydrograph_ids_file=train_ids_file,
         split="train",
@@ -286,16 +300,15 @@ def main():
             'cell_velocity_y': velocity_y,
         }
         pyg_dataset = convert_to_pyg(dataset_features)
-        print(pyg_dataset, flush=True)
         grid_dataset.append(pyg_dataset)
-    save_database(grid_dataset, name='train', out_path=f"{dataset_folder}/train")
+    print('Saving training dataset', flush=True)
+    save_database(grid_dataset, name='hydrographnet', out_path=f"{dataset_folder}/train")
 
     # ============= Create test dataset =============
-    rollout_length = num_val_timesteps
+    rollout_length = num_val_timesteps + 1
     test_processed = process_dataset(
         data_dir=hydrographnet_data_folder,
         prefix=prefix,
-        n_time_steps=n_time_steps,
         k=k,
         hydrograph_ids_file=test_ids_file,
         split="test",
@@ -331,9 +344,9 @@ def main():
             'cell_velocity_y': velocity_y,
         }
         pyg_dataset = convert_to_pyg(dataset_features)
-        print(pyg_dataset, flush=True)
         grid_dataset.append(pyg_dataset)
-    save_database(grid_dataset, name='test', out_path=f"{dataset_folder}/test")
+    print('Saving testing dataset', flush=True)
+    save_database(grid_dataset, name='hydrographnet', out_path=f"{dataset_folder}/test")
 
 if __name__ == "__main__":
     main()

@@ -43,6 +43,8 @@ def main(config):
         scalers=scalers, device='cpu', **dataset_parameters,
         **selected_node_features, **selected_edge_features
     )
+    print('Length of training dataset:\t', len(train_dataset))
+    print('Length of validation dataset:\t', len(val_dataset))
 
     temporal_dataset_parameters = config.temporal_dataset_parameters
 

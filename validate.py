@@ -9,7 +9,7 @@ from utils.miscellaneous import get_model, SpatialAnalysis
 from validation.validation_stats import ValidationStats
 from utils.logging_utils import Logger
 
-def main(config, model_path: str, output_path: str):
+def main(config, model_path: str, output_path: list[str]):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print('Using device:\t', device)
 
@@ -22,6 +22,7 @@ def main(config, model_path: str, output_path: str):
         scalers=scalers, device='cpu', **dataset_parameters,
         **selected_node_features, **selected_edge_features
     )
+    assert len(test_dataset)  == len(output_path), "Must provide one output path per dataset"
 
     temporal_dataset_parameters = config['temporal_dataset_parameters']
 
@@ -57,30 +58,35 @@ def main(config, model_path: str, output_path: str):
 
     # Prediction metrics
     validation_stats = ValidationStats(logger=Logger())
-    DATASET_IDX = 0
     WATER_DEPTH_IDX = 0
     CLIP_NEGATIVE_WATER_DEPTH = True
+    num_datasets = spatial_analyser.predicted_rollout.shape[0]
     n_timesteps = spatial_analyser.predicted_rollout.shape[3]
-    for i in range(n_timesteps):
-        water_depth_pred = spatial_analyser.predicted_rollout[DATASET_IDX, :, WATER_DEPTH_IDX, i].unsqueeze(-1)
-        water_depth_target = spatial_analyser.real_rollout[DATASET_IDX, :, WATER_DEPTH_IDX, i].unsqueeze(-1)
+    print('Number of timesteps for test datasets:', n_timesteps, flush=True)
+    for dataset_idx in range(num_datasets):
+        pred_rollout = spatial_analyser.predicted_rollout[dataset_idx, :, :, :]
+        real_rollout = spatial_analyser.real_rollout[dataset_idx, :, :, :]
 
-        if CLIP_NEGATIVE_WATER_DEPTH:
-            # Clip negative values for water depth
-            water_depth_pred = torch.clip(water_depth_pred, min=0)
-            water_depth_target = torch.clip(water_depth_target, min=0)
+        for i in range(n_timesteps):
+            water_depth_pred = pred_rollout[:, WATER_DEPTH_IDX, i].unsqueeze(-1)
+            water_depth_target = real_rollout[:, WATER_DEPTH_IDX, i].unsqueeze(-1)
 
-        validation_stats.update_stats_for_epoch(water_depth_pred.cpu(),
-                                                water_depth_target.cpu(),
-                                                water_threshold=0.05)
+            if CLIP_NEGATIVE_WATER_DEPTH:
+                # Clip negative values for water depth
+                water_depth_pred = torch.clip(water_depth_pred, min=0)
+                water_depth_target = torch.clip(water_depth_target, min=0)
 
-    validation_stats.print_stats_summary()
+            validation_stats.update_stats_for_epoch(water_depth_pred.cpu(),
+                                                    water_depth_target.cpu(),
+                                                    water_threshold=0.05)
 
-    # Prediction time
-    inference_pred_time = spatial_analyser.prediction_times[0] / n_timesteps
-    print(f'Inference time for one timestep: {inference_pred_time:4f} seconds', flush=True)
+        validation_stats.print_stats_summary()
 
-    validation_stats.save_stats(output_path)
+        # Prediction time
+        inference_pred_time = spatial_analyser.prediction_times[dataset_idx] / n_timesteps
+        print(f'Inference time for one timestep: {inference_pred_time:4f} seconds', flush=True)
+
+        validation_stats.save_stats(output_path[dataset_idx])
 
     # SWE-GNN metrics
     rollout_loss = spatial_analyser._get_rollout_loss(type_loss=type_loss)
@@ -103,7 +109,7 @@ if __name__ == '__main__':
     # Read configuration file with parameters
     parser = ArgumentParser(description='')
     parser.add_argument("--model_path", type=str, required=True, help='Path to model to be validated')
-    parser.add_argument("--output_path", type=str, required=True, help='Path to numpy file to be saved')
+    parser.add_argument("--output_path", nargs='+', type=str, required=True, help='Path to numpy file to be saved')
     parser.add_argument("--config", type=str, default='config.yaml', help='Config file path')
     args = parser.parse_args()
 

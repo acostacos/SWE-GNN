@@ -11,5 +11,6 @@ slurm-*.out
 .vscode
 results/personal_tests/
 database/hecras_datasets
+database/hydrographnet_datasets/
 saved_metrics/
 slurm_logs/

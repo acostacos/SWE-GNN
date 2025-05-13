@@ -57,13 +57,14 @@ def main(config, model_path: str, output_path: list[str]):
     spatial_analyser = SpatialAnalysis(model, test_dataset, device=device, **temporal_test_dataset_parameters)
 
     # Prediction metrics
-    validation_stats = ValidationStats(logger=Logger())
+    logger = Logger()
     WATER_DEPTH_IDX = 0
     CLIP_NEGATIVE_WATER_DEPTH = True
     num_datasets = spatial_analyser.predicted_rollout.shape[0]
     n_timesteps = spatial_analyser.predicted_rollout.shape[3]
     print('Number of timesteps for test datasets:', n_timesteps, flush=True)
     for dataset_idx in range(num_datasets):
+        validation_stats = ValidationStats(logger=logger)
         pred_rollout = spatial_analyser.predicted_rollout[dataset_idx, :, :, :]
         real_rollout = spatial_analyser.real_rollout[dataset_idx, :, :, :]
 

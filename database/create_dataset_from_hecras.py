@@ -75,9 +75,9 @@ def get_cell_slope(hec_ras_filepath: str, edge_shp_path: str, edge_index: torch.
     for cell_i in range(n_cells):
         cell_edge_idx = ((edge_index[0] == cell_i) | (edge_index[1] == cell_i)).nonzero()
 
-        # Slope for each cell is the average of the slopes of the edges connected to it
-        slope_x[cell_i] = np.average(edge_slope_x[cell_edge_idx])
-        slope_y[cell_i] = np.average(edge_slope_y[cell_edge_idx])
+        # Slope components for each cell is the sum of the slope components of the edges connected to it
+        slope_x[cell_i] = np.sum(edge_slope_x[cell_edge_idx])
+        slope_y[cell_i] = np.sum(edge_slope_y[cell_edge_idx])
 
     return torch.FloatTensor(slope_x), torch.FloatTensor(slope_y)
 
@@ -86,7 +86,10 @@ def get_edge_relative_distance(pos: torch.Tensor, edge_index: torch.Tensor) -> t
     edge_relative_distance = pos[col] - pos[row]
     return edge_relative_distance
 
-def get_dataset_features(hec_ras_file_path: str, node_shp_path: str, edge_shp_path: str) -> dict:
+def get_dataset_features(hec_ras_file_path: str,
+                         node_shp_path: str,
+                         edge_shp_path: str,
+                         ts_from_peak_water_depth: int) -> dict:
     # HEC-RAS data retrieval
     water_level = torch.FloatTensor(get_water_level(hec_ras_file_path))
     cell_velocity_x, cell_velocity_y = get_cell_velocity(hec_ras_file_path, node_shp_path)
@@ -105,6 +108,15 @@ def get_dataset_features(hec_ras_file_path: str, node_shp_path: str, edge_shp_pa
     edge_index = to_undirected(edge_index)
     edge_distance = torch.cat([edge_distance, edge_distance], dim=0)
     edge_relative_distance = get_edge_relative_distance(pos, edge_index)
+
+    if ts_from_peak_water_depth is not None:
+        # Trim water depth to peak water level for dynamic features
+        peak_water_level_ts = water_depth.sum(axis=1).argmax()
+        last_ts = peak_water_level_ts + ts_from_peak_water_depth
+
+        water_level = water_level[:last_ts]
+        cell_velocity_x = cell_velocity_x[:last_ts]
+        cell_velocity_y = cell_velocity_y[:last_ts]
 
     # Get graph features
     num_nodes = len(dem)
@@ -152,6 +164,7 @@ def main():
         },
     }
     base_dataset_floder = "hecras_datasets"
+    ts_from_peak_water_depth = 50 # Set to None to disable
 
     dataset_keys = list(datasets.keys())
     for key in dataset_keys:
@@ -168,7 +181,10 @@ def main():
         node_shp_path = paths['node_shp_path']
         edge_shp_path = paths['edge_shp_path']
 
-        dataset_features = get_dataset_features(hec_ras_file_path, node_shp_path, edge_shp_path)
+        dataset_features = get_dataset_features(hec_ras_file_path,
+                                                node_shp_path,
+                                                edge_shp_path,
+                                                ts_from_peak_water_depth)
         print(f"\tFinished obtaining features for event {key}", flush=True)
         pyg_dataset = [convert_to_pyg(dataset_features)]
 

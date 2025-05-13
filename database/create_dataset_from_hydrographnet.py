@@ -8,10 +8,6 @@ from scipy.spatial import KDTree
 from graph_creation import create_dataset_folders, save_database
 from torch_geometric.data import Data
 
-config = {
-
-}
-
 def load_constant_data(folder: str, prefix: str,
                         norm_stats_static: Optional[dict] = None):
     epsilon = 1e-8
@@ -144,15 +140,6 @@ def process_dataset(data_dir: str,
             hydrograph_ids = [line.strip() for line in lines if line.strip()]
         else:
             raise FileNotFoundError(f"Hydrograph IDs file not found: {file_path}")
-    else:
-        all_files = os.listdir(data_dir)
-        hydrograph_ids = []
-        for f in all_files:
-            if f.startswith(f"{prefix}_WD_") and f.endswith(".txt"):
-                parts = f.split('_')
-                if len(parts) >= 3:
-                    hid = os.path.splitext(parts[2])[0]
-                    hydrograph_ids.append(hid)
 
     # Process dynamic data (water depth, inflow, volume, precipitation) for each hydrograph.
     temp_dynamic_data = []
@@ -162,11 +149,6 @@ def process_dataset(data_dir: str,
     for hid in tqdm(hydrograph_ids, desc="Processing Hydrographs"):
         water_depth, inflow_hydrograph, volume, precipitation, velocity_x, velocity_y = load_dynamic_data(
             data_dir, hid, prefix, num_points=num_nodes)
-
-        if split != "train":
-            water_depth = water_depth[:rollout_length]
-            velocity_x = velocity_x[:rollout_length]
-            velocity_y = velocity_y[:rollout_length]
 
         temp_dynamic_data.append({
             "water_depth": water_depth,
@@ -196,18 +178,29 @@ def process_dataset(data_dir: str,
     # Normalize the dynamic data.
     dynamic_data = []
     for dyn in temp_dynamic_data:
+        water_depth = dyn["water_depth"] # Do not normalize water depth for message passing
+        velocity_x = normalize(dyn["velocity_x"],
+                               dynamic_stats["velocity_x"]["mean"],
+                               dynamic_stats["velocity_x"]["std"])
+        velocity_y = normalize(dyn["velocity_y"],
+                                 dynamic_stats["velocity_y"]["mean"],
+                                 dynamic_stats["velocity_y"]["std"])
+
+        if split != "train":
+            # Offset index by 1 to follow format of HydroGraphNet
+            start_idx, end_idx = 1, (rollout_length + 1)
+
+            water_depth = water_depth[start_idx:end_idx]
+            velocity_x = velocity_x[start_idx:end_idx]
+            velocity_y = velocity_y[start_idx:end_idx]
+
         dyn_std = {
-            "water_depth": normalize(dyn["water_depth"],
-                                            dynamic_stats["water_depth"]["mean"],
-                                            dynamic_stats["water_depth"]["std"]),
-            "velocity_x": normalize(dyn["velocity_x"],
-                                            dynamic_stats["velocity_x"]["mean"],
-                                            dynamic_stats["velocity_x"]["std"]),
-            "velocity_y": normalize(dyn["velocity_y"],
-                                            dynamic_stats["velocity_y"]["mean"],
-                                            dynamic_stats["velocity_y"]["std"]),
+            "water_depth": water_depth,
+            "velocity_x": velocity_x,
+            "velocity_y": velocity_y,
             "hydro_id": dyn["hydro_id"],
         }
+
         dynamic_data.append(dyn_std)
     
     if split == "test":

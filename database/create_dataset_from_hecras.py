@@ -111,10 +111,10 @@ def get_dataset_features(hec_ras_file_path: str,
 
     if ts_from_peak_water_depth is not None:
         # Trim water depth to peak water level for dynamic features
-        peak_water_level_ts = water_depth.sum(axis=1).argmax()
-        last_ts = peak_water_level_ts + ts_from_peak_water_depth
+        peak_water_depth_ts = water_depth.sum(axis=1).argmax()
+        last_ts = peak_water_depth_ts + ts_from_peak_water_depth
 
-        water_level = water_level[:last_ts]
+        water_depth = water_depth[:last_ts]
         cell_velocity_x = cell_velocity_x[:last_ts]
         cell_velocity_y = cell_velocity_y[:last_ts]
 

@@ -8,6 +8,18 @@
 
 . venv/bin/activate
 
+echo "========== initp01 =========="
+srun python main.py --config 'configs/initp01_config.yaml'
+
+echo "========== initp02 =========="
+srun python main.py --config 'configs/initp02_config.yaml'
+
+echo "========== initp03 =========="
+srun python main.py --config 'configs/initp03_config.yaml'
+
+echo "========== initp04 =========="
+srun python main.py --config 'configs/initp04_config.yaml'
+
 echo "========== lrp01 =========="
 srun python main.py --config 'configs/lrp01_config.yaml'
 
@@ -19,3 +31,9 @@ srun python main.py --config 'configs/lrp05_config.yaml'
 
 echo "========== lrp08 =========="
 srun python main.py --config 'configs/lrp08_config.yaml'
+
+echo "========== HydroGraphNet =========="
+srun python main.py --config 'configs/hydrographnet_config.yaml'
+
+echo "========== Orig Data =========="
+srun python main.py

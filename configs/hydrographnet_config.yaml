@@ -71,9 +71,9 @@ trainer_options:
   only_where_water  : True          # Calculate loss only where there's water
   batch_size        : 8             # batch size
   velocity_scaler   : 3             # weighting coefficient for velocity in loss (eq. 14)
-  curriculum_epoch  : 10            # number of epochs before updating curriculum strategy
+  curriculum_epoch  : 2             # number of epochs before updating curriculum strategy
   patience          : 30            # patience for early stopping
-  max_epochs        : 100           # maximum number of epochs
+  max_epochs        : 20            # maximum number of epochs
   report_freq       : 5             # frquency to report loss in print
 
 # learning rate (optimizer parameters)

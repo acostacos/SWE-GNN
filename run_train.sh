@@ -8,6 +8,9 @@
 
 . venv/bin/activate
 
+echo "========== New HEC-RAS Data =========="
+srun python main.py --config 'configs/hecras_config.yaml'
+
 echo "========== initp01 =========="
 srun python main.py --config 'configs/initp01_config.yaml'
 

@@ -218,8 +218,7 @@ def main():
     root_dir = ""
     config_file_path = ""
     base_dataset_folder = "hecras_datasets"
-    spin_up_timesteps = 432
-    test_spin_up_timesteps = 864
+    spin_up_timesteps = 864
     ts_from_peak_water_depth = 24 # Set to None to disable
     downsample_interval = 6
 
@@ -245,7 +244,7 @@ def main():
     print(f"Training dataset created and saved in folder {train_folder}.")
 
     test_pyg_dataset = create_pyg_dataset(test_datasets,
-                                          test_spin_up_timesteps,
+                                          spin_up_timesteps,
                                           ts_from_peak_water_depth,
                                           downsample_interval)
     test_folder = f"{base_dataset_folder}/test"

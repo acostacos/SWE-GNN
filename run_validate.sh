@@ -7,6 +7,9 @@
 
 . venv/bin/activate
 
+echo "========== New HEC-RAS Data =========="
+srun python validate.py --config 'configs/hecras_config.yaml' --model_path '' --output_path 'saved_metrics/SWEGNN_run_id_38_metrics.npz' 'saved_metrics/SWEGNN_run_id_39_metrics.npz' 'saved_metrics/SWEGNN_run_id_40_metrics.npz' 'saved_metrics/SWEGNN_run_id_41_metrics.npz'
+
 echo "========== initp01 =========="
 srun python validate.py --config 'configs/initp01_config.yaml' --output_path 'saved_metrics/SWEGNN_initp01_metrics.npz' --model_path 'wandb/initp01-train-0513-20epoch/files/339i9547.h5'
 

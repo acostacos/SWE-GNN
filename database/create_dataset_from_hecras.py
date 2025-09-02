@@ -42,7 +42,10 @@ def get_dataset_info_from_summary(summary_path: str, root_dir: str, nodes_shp_pa
         }
     return datasets
 
-def create_pyg_dataset(dataset_info: dict, spin_up_timesteps: int, ts_from_peak_water_depth: int):
+def create_pyg_dataset(dataset_info: dict,
+                       spin_up_timesteps: int = None,
+                       ts_from_peak_water_depth: int = None,
+                       downsample_interval: int = None) -> list[Data]:
     complete_pyg_dataset = []
     for key, paths in dataset_info.items():
         print(f"Processing event {key}", flush=True)
@@ -53,7 +56,8 @@ def create_pyg_dataset(dataset_info: dict, spin_up_timesteps: int, ts_from_peak_
                                                 node_shp_path,
                                                 edge_shp_path,
                                                 spin_up_timesteps,
-                                                ts_from_peak_water_depth)
+                                                ts_from_peak_water_depth,
+                                                downsample_interval)
         pyg_dataset = convert_to_pyg(dataset_features)
         complete_pyg_dataset.append(pyg_dataset)
     return complete_pyg_dataset
@@ -139,8 +143,9 @@ def get_edge_relative_distance(pos: torch.Tensor, edge_index: torch.Tensor) -> t
 def get_dataset_features(hec_ras_file_path: str,
                          node_shp_path: str,
                          edge_shp_path: str,
-                         spin_up_timesteps: int,
-                         ts_from_peak_water_depth: int) -> dict:
+                         spin_up_timesteps: int = None,
+                         ts_from_peak_water_depth: int = None,
+                         downsample_interval: int = None) -> dict:
     # HEC-RAS data retrieval
     water_level = torch.FloatTensor(get_water_level(hec_ras_file_path))
     cell_velocity_x, cell_velocity_y = get_cell_velocity(hec_ras_file_path, node_shp_path)
@@ -161,15 +166,16 @@ def get_dataset_features(hec_ras_file_path: str,
     edge_relative_distance = get_edge_relative_distance(pos, edge_index)
 
     # Trim dynamic features
-    start = 0 if spin_up_timesteps is None else spin_up_timesteps
+    start = spin_up_timesteps if spin_up_timesteps is not None else 0
     end = None
     if ts_from_peak_water_depth is not None:
         peak_water_depth_ts = water_depth.sum(axis=1).argmax().item()
         end = peak_water_depth_ts + ts_from_peak_water_depth
+    interval = downsample_interval if downsample_interval is not None else 1
 
-    water_depth = water_depth[start:end]
-    cell_velocity_x = cell_velocity_x[start:end]
-    cell_velocity_y = cell_velocity_y[start:end]
+    water_depth = water_depth[start:end:interval]
+    cell_velocity_x = cell_velocity_x[start:end:interval]
+    cell_velocity_y = cell_velocity_y[start:end:interval]
 
     # Get graph features
     num_nodes = len(dem)
@@ -215,6 +221,7 @@ def main():
     spin_up_timesteps = 432
     test_spin_up_timesteps = 864
     ts_from_peak_water_depth = 24 # Set to None to disable
+    downsample_interval = 6
 
     info = get_info_from_config(config_file_path, root_dir)
 
@@ -231,14 +238,16 @@ def main():
 
     train_pyg_dataset = create_pyg_dataset(train_datasets,
                                            spin_up_timesteps,
-                                           ts_from_peak_water_depth)
+                                           ts_from_peak_water_depth,
+                                           downsample_interval)
     train_folder = f"{base_dataset_folder}/train"
     save_database(train_pyg_dataset, name='hecras', out_path=train_folder)
     print(f"Training dataset created and saved in folder {train_folder}.")
 
     test_pyg_dataset = create_pyg_dataset(test_datasets,
                                           test_spin_up_timesteps,
-                                          ts_from_peak_water_depth)
+                                          ts_from_peak_water_depth,
+                                          downsample_interval)
     test_folder = f"{base_dataset_folder}/test"
     save_database(test_pyg_dataset, name='hecras', out_path=test_folder)
     print(f"Testing dataset created and saved in folder {test_folder}.")

@@ -5,7 +5,10 @@ dataset_parameters:
   temporal_res: 30      # temporal resolution
   train_size: 80        # training set size
   val_prcnt: 0.01       # percentage of validation sample from training dataset
-  test_size: 4         # choose from: value(1,20), 'random_breach', 'big'
+  test_size: '38'       # choose from: value(1,20), 'random_breach', 'big'
+  # test_size: '39'
+  # test_size: '40'
+  # test_size: '41'
   seed: 42             # seed for randomness in training/validation split
 
 # Scaler options: null, 'minmax', 'minmax_neg', or 'standard'

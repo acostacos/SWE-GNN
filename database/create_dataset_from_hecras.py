@@ -243,13 +243,14 @@ def main():
     save_database(train_pyg_dataset, name='hecras', out_path=train_folder)
     print(f"Training dataset created and saved in folder {train_folder}.")
 
-    test_pyg_dataset = create_pyg_dataset(test_datasets,
-                                          spin_up_timesteps,
-                                          ts_from_peak_water_depth,
-                                          downsample_interval)
-    test_folder = f"{base_dataset_folder}/test"
-    save_database(test_pyg_dataset, name='hecras', out_path=test_folder)
-    print(f"Testing dataset created and saved in folder {test_folder}.")
+    for key, paths in test_datasets.items():
+        test_pyg_dataset = create_pyg_dataset({key: paths},
+                                            spin_up_timesteps,
+                                            ts_from_peak_water_depth,
+                                            downsample_interval)
+        test_folder = f"{base_dataset_folder}/test"
+        save_database(test_pyg_dataset, name=key, out_path=test_folder)
+        print(f"Testing dataset for Event {key} created and saved in folder {test_folder}.")
 
 if __name__ == "__main__":
     main()

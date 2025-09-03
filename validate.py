@@ -56,10 +56,14 @@ def main(config, model_path: str, output_path: list[str]):
     type_loss = config['trainer_options']['type_loss']
     spatial_analyser = SpatialAnalysis(model, test_dataset, device=device, **temporal_test_dataset_parameters)
 
-    # Prediction metrics
-    logger = Logger()
     WATER_DEPTH_IDX = 0
     CLIP_NEGATIVE_WATER_DEPTH = True
+    REMOVE_GHOST_NODES = True
+    START_GHOST_NODE_IDX = 1126 # for HEC-RAS dataset
+    START_PREDICTION_STEP = previous_t  # to avoid using initial condition
+
+    # Prediction metrics
+    logger = Logger()
     num_datasets = spatial_analyser.predicted_rollout.shape[0]
     n_timesteps = spatial_analyser.predicted_rollout.shape[3]
     print('Number of timesteps for test datasets:', n_timesteps, flush=True)
@@ -68,9 +72,13 @@ def main(config, model_path: str, output_path: list[str]):
         pred_rollout = spatial_analyser.predicted_rollout[dataset_idx, :, :, :]
         real_rollout = spatial_analyser.real_rollout[dataset_idx, :, :, :]
 
-        for i in range(n_timesteps):
+        for i in range(START_PREDICTION_STEP, n_timesteps):
             water_depth_pred = pred_rollout[:, WATER_DEPTH_IDX, i].unsqueeze(-1)
             water_depth_target = real_rollout[:, WATER_DEPTH_IDX, i].unsqueeze(-1)
+
+            if REMOVE_GHOST_NODES:
+                water_depth_pred = water_depth_pred[:START_GHOST_NODE_IDX, :]
+                water_depth_target = water_depth_target[:START_GHOST_NODE_IDX, :]
 
             if CLIP_NEGATIVE_WATER_DEPTH:
                 # Clip negative values for water depth

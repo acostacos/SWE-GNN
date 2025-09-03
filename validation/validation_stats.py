@@ -25,6 +25,9 @@ class ValidationStats:
         self.nse_flooded_list = []
         self.csi_flooded_list = []
 
+        self.edge_pred_list = []
+        self.edge_target_list = []
+
         self.log = print
         if logger is not None and hasattr(logger, 'log'):
             self.log = logger.log
@@ -118,7 +121,9 @@ class ValidationStats:
             'rmse_flooded': np.array(self.rmse_flooded_list),
             'mae_flooded': np.array(self.mae_flooded_list),
             'nse_flooded': np.array(self.nse_flooded_list),
-            'csi_flooded': np.array(self.csi_flooded_list)
+            'csi_flooded': np.array(self.csi_flooded_list),
+            'edge_pred': np.array(self.edge_pred_list),
+            'edge_target': np.array(self.edge_target_list),
         }
         np.savez(filepath, **stats)
 

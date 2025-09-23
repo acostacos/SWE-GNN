@@ -62,6 +62,31 @@ def create_pyg_dataset(dataset_info: dict,
         complete_pyg_dataset.append(pyg_dataset)
     return complete_pyg_dataset
 
+def downsample_dynamic_data(dynamic_data: torch.Tensor, step: int, aggr: str = 'first') -> torch.Tensor:
+    if step == 1:
+        return dynamic_data
+
+    # Trim array to be divisible by step
+    trimmed_length = (dynamic_data.shape[0] // step) * step
+    trimmed_array = dynamic_data[:trimmed_length]
+
+    if aggr == 'first':
+        return trimmed_array[::step]
+
+    elif aggr in ['mean', 'sum']:
+        # Reshape to group consecutive elements
+        if dynamic_data.ndim == 1:
+            reshaped = trimmed_array.reshape(-1, step) # (timesteps, step)
+        else:
+            reshaped = trimmed_array.reshape(-1, step, dynamic_data.shape[1]) # (timesteps, step, feature)
+
+        if aggr == 'mean':
+            return torch.mean(reshaped, axis=1)
+        elif aggr == 'sum':
+            return torch.sum(reshaped, axis=1)
+
+    raise ValueError(f"Aggregation method '{aggr}' is not supported")
+
 def get_cell_velocity(hec_ras_filepath: str, node_shp_filepath: str, perimeter_name: str = 'Perimeter 1') -> torch.Tensor:
     '''Adopted from https://doi.org/10.26188/24312658'''
     def dist_center2faces(center_xy,faces_xy):
@@ -171,11 +196,15 @@ def get_dataset_features(hec_ras_file_path: str,
     if ts_from_peak_water_depth is not None:
         peak_water_depth_ts = water_depth.sum(axis=1).argmax().item()
         end = peak_water_depth_ts + ts_from_peak_water_depth
-    interval = downsample_interval if downsample_interval is not None else 1
 
-    water_depth = water_depth[start:end:interval]
-    cell_velocity_x = cell_velocity_x[start:end:interval]
-    cell_velocity_y = cell_velocity_y[start:end:interval]
+    water_depth = water_depth[start:end]
+    cell_velocity_x = cell_velocity_x[start:end]
+    cell_velocity_y = cell_velocity_y[start:end]
+
+    if downsample_interval is not None:
+        water_depth = downsample_dynamic_data(water_depth, downsample_interval, aggr='mean')
+        cell_velocity_x = downsample_dynamic_data(cell_velocity_x, downsample_interval, aggr='mean')
+        cell_velocity_y = downsample_dynamic_data(cell_velocity_y, downsample_interval, aggr='mean')
 
     # Get graph features
     num_nodes = len(dem)

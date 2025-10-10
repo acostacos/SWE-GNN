@@ -61,6 +61,7 @@ def main(config, model_path: str, output_path: list[str]):
     REMOVE_GHOST_NODES = True
     START_GHOST_NODE_IDX = 1126 # for HEC-RAS dataset
     START_PREDICTION_STEP = previous_t  # to avoid using initial condition
+    NUM_TS_GT_PAD = 1 # Num timesteps of ground truth to be added at start; Used to balance rollout length with other compared models
 
     # Prediction metrics
     logger = Logger()
@@ -69,10 +70,15 @@ def main(config, model_path: str, output_path: list[str]):
     print('Number of timesteps for test datasets:', n_timesteps, flush=True)
     for dataset_idx in range(num_datasets):
         validation_stats = ValidationStats(logger=logger)
-        pred_rollout = spatial_analyser.predicted_rollout[dataset_idx, :, :, :]
-        real_rollout = spatial_analyser.real_rollout[dataset_idx, :, :, :]
+        pred_rollout = spatial_analyser.predicted_rollout[dataset_idx, :, :, START_PREDICTION_STEP:]
+        real_rollout = spatial_analyser.real_rollout[dataset_idx, :, :, START_PREDICTION_STEP:]
 
-        for i in range(START_PREDICTION_STEP, n_timesteps):
+        gt_pad = test_dataset[dataset_idx].y[:, :, START_PREDICTION_STEP-NUM_TS_GT_PAD:START_PREDICTION_STEP]
+
+        pred_rollout = torch.cat([gt_pad, pred_rollout], dim=-1)
+        real_rollout = torch.cat([gt_pad, real_rollout], dim=-1)
+
+        for i in range(pred_rollout.shape[-1]):
             water_depth_pred = pred_rollout[:, WATER_DEPTH_IDX, i].unsqueeze(-1)
             water_depth_target = real_rollout[:, WATER_DEPTH_IDX, i].unsqueeze(-1)
 

@@ -73,7 +73,9 @@ def main(config, model_path: str, output_path: list[str]):
         pred_rollout = spatial_analyser.predicted_rollout[dataset_idx, :, :, START_PREDICTION_STEP:]
         real_rollout = spatial_analyser.real_rollout[dataset_idx, :, :, START_PREDICTION_STEP:]
 
-        gt_pad = test_dataset[dataset_idx].y[:, :, START_PREDICTION_STEP-NUM_TS_GT_PAD:START_PREDICTION_STEP]
+        gt_pad_start = START_PREDICTION_STEP + 1 - NUM_TS_GT_PAD
+        gt_pad_end = START_PREDICTION_STEP + 1
+        gt_pad = test_dataset[dataset_idx].y[:, :, gt_pad_start:gt_pad_end]
 
         pred_rollout = torch.cat([gt_pad, pred_rollout], dim=-1)
         real_rollout = torch.cat([gt_pad, real_rollout], dim=-1)

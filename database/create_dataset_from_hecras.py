@@ -127,7 +127,7 @@ def get_cell_velocity(hec_ras_filepath: str, node_shp_filepath: str, perimeter_n
 
         dx_center2face = dist_center2faces(cell_xy,face_center_xy)
 
-        if not cell_area[cell_i].any():
+        if cell_area[cell_i] == 0 or np.isnan(cell_area[cell_i]):
             continue
         else:
             cell_velocity_x[:,cell_i] = 1/cell_area[cell_i] * np.sum(dx_center2face * 
@@ -140,23 +140,54 @@ def get_cell_velocity(hec_ras_filepath: str, node_shp_filepath: str, perimeter_n
 
     return torch.FloatTensor(cell_velocity_x), torch.FloatTensor(cell_velocity_y)
 
-def get_cell_slope(hec_ras_filepath: str, edge_shp_path: str, edge_index: torch.Tensor, n_cells: int, perimeter_name: str = 'Perimeter 1') -> tuple[torch.Tensor, torch.Tensor]:
-    edge_slope = get_edge_slope(edge_shp_path)
-    edge_direction_x = get_edge_direction_x(hec_ras_filepath, perimeter_name)
-    edge_direction_y = get_edge_direction_y(hec_ras_filepath, perimeter_name)
+def get_cell_slope(node_shp_path: str, edge_index: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    pos = get_cell_position(node_shp_path)
+    elevation = get_cell_elevation(node_shp_path)
+    num_nodes = edge_index.max().item() + 1
 
-    # Compute slope in x and y directions
-    edge_slope_x = edge_slope * edge_direction_x
-    edge_slope_y = edge_slope * edge_direction_y
+    slope_x = np.zeros(num_nodes)
+    slope_y = np.zeros(num_nodes)
 
-    slope_x = np.zeros((n_cells))
-    slope_y = np.zeros((n_cells))
-    for cell_i in range(n_cells):
-        cell_edge_idx = ((edge_index[0] == cell_i) | (edge_index[1] == cell_i)).nonzero()
+    for cell_i in range(num_nodes):
+        # Find all edges connected to this cell
+        cell_edge_mask = (edge_index[0] == cell_i) | (edge_index[1] == cell_i)
+        cell_edge_idx = cell_edge_mask.nonzero(as_tuple=False).squeeze()
 
-        # Slope components for each cell is the sum of the slope components of the edges connected to it
-        slope_x[cell_i] = np.sum(edge_slope_x[cell_edge_idx])
-        slope_y[cell_i] = np.sum(edge_slope_y[cell_edge_idx])
+        if cell_edge_idx.numel() == 0:
+            continue
+
+        # Get neighboring cells
+        neighbor_cells = []
+        for edge_idx in cell_edge_idx:
+            if edge_index[0, edge_idx] == cell_i:
+                neighbor_cells.append(edge_index[1, edge_idx].item())
+            else:
+                neighbor_cells.append(edge_index[0, edge_idx].item())
+
+        # Compute slopes for each neighboring connection
+        slopes_x = []
+        slopes_y = []
+
+        for neighbor_idx in neighbor_cells:
+            # Calculate position differences
+            dx = pos[neighbor_idx, 0] - pos[cell_i, 0]
+            dy = pos[neighbor_idx, 1] - pos[cell_i, 1]
+            dz = elevation[neighbor_idx] - elevation[cell_i]
+
+            # Calculate horizontal distance
+            dist_xy = np.sqrt(dx**2 + dy**2)
+
+            if dist_xy > 0:
+                # Slope components: dz/dx and dz/dy
+                # Using chain rule: dz/dx = (dz/dist) * (dx/dist)
+                slope_magnitude = dz / dist_xy
+                slopes_x.append(slope_magnitude * (dx / dist_xy))
+                slopes_y.append(slope_magnitude * (dy / dist_xy))
+
+        # Average slopes from all neighbors
+        if len(slopes_x) > 0:
+            slope_x[cell_i] = np.mean(slopes_x)
+            slope_y[cell_i] = np.mean(slopes_y)
 
     return torch.FloatTensor(slope_x), torch.FloatTensor(slope_y)
 
@@ -183,7 +214,7 @@ def get_dataset_features(hec_ras_file_path: str,
     # Edge Shapefile data retrieval
     edge_index = torch.LongTensor(get_edge_index(edge_shp_path))
     edge_distance = torch.FloatTensor(get_edge_length(edge_shp_path))
-    slope_x, slope_y = get_cell_slope(hec_ras_file_path, edge_shp_path, edge_index, len(dem))
+    slope_x, slope_y = get_cell_slope(node_shp_path, edge_index)
 
     # Convert edges to undirected
     edge_index = to_undirected(edge_index)
@@ -248,8 +279,8 @@ def main():
     config_file_path = ""
     base_dataset_folder = "hecras_datasets"
     spin_up_timesteps = 864
-    ts_from_peak_water_depth = 24 # Set to None to disable
-    downsample_interval = 6
+    ts_from_peak_water_depth = None # Set to None to disable
+    downsample_interval = 3
 
     info = get_info_from_config(config_file_path, root_dir)
 

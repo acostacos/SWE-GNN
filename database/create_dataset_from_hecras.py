@@ -151,7 +151,7 @@ def get_cell_slope(node_shp_path: str, edge_index: torch.Tensor) -> tuple[torch.
     for cell_i in range(num_nodes):
         # Find all edges connected to this cell
         cell_edge_mask = (edge_index[0] == cell_i) | (edge_index[1] == cell_i)
-        cell_edge_idx = cell_edge_mask.nonzero(as_tuple=False).squeeze()
+        cell_edge_idx = cell_edge_mask.nonzero().squeeze(-1)
 
         if cell_edge_idx.numel() == 0:
             continue

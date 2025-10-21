@@ -1,7 +1,7 @@
 # dataset creation parameters
 dataset_parameters:
   dataset_name: 'hecras'
-  dataset_folder: 'database/hecras_datasets'  # datasets location
+  dataset_folder: 'database/hecras_datasets_no_trim'  # datasets location
   temporal_res: 30      # temporal resolution
   train_size: 80        # training set size
   val_prcnt: 0.01       # percentage of validation sample from training dataset

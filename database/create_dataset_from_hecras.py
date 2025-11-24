@@ -9,7 +9,8 @@ from torch_geometric.data import Data
 from torch_geometric.utils import to_undirected
 from transform_helper_files.hecras_data_retrieval import get_cell_area, get_water_level, get_facepoint_coordinates, get_velocity,\
     get_edge_direction_x, get_edge_direction_y, get_face_length, get_facecell_indexes, get_facepoint_indexes
-from transform_helper_files.shp_data_retrieval import get_cell_position, get_cell_elevation, get_edge_index, get_edge_length, get_edge_slope
+from transform_helper_files.shp_data_retrieval import get_cell_position, get_cell_elevation, get_edge_index, get_edge_length
+from transform_helper_files.dem_feature_extraction import get_filled_dem, get_slope, get_aspect
 
 def get_info_from_config(config_file_path: str, root_dir: str) -> dict:
     with open(config_file_path, 'r') as file:
@@ -18,17 +19,19 @@ def get_info_from_config(config_file_path: str, root_dir: str) -> dict:
     dataset_config = config['dataset_parameters']
     nodes_shp_path = os.path.join(root_dir, 'raw', dataset_config['nodes_shp_file'])
     edges_shp_path = os.path.join(root_dir, 'raw', dataset_config['edges_shp_file'])
+    dem_path = os.path.join(root_dir, 'raw', dataset_config['dem_file'])
     train_summary_path = os.path.join(root_dir, 'raw', dataset_config['training']['dataset_summary_file'])
     test_summary_path = os.path.join(root_dir, 'raw', dataset_config['testing']['dataset_summary_file'])
 
     return {
         'nodes_shp_path': nodes_shp_path,
         'edges_shp_path': edges_shp_path,
+        'dem_path': dem_path,
         'train_summary_path': train_summary_path,
         'test_summary_path': test_summary_path,
     }
 
-def get_dataset_info_from_summary(summary_path: str, root_dir: str, nodes_shp_path: str, edges_shp_path: str) -> dict:
+def get_dataset_info_from_summary(summary_path: str, root_dir: str, nodes_shp_path: str, edges_shp_path: str, dem_path: str) -> dict:
     summary_df = pd.read_csv(summary_path)
 
     datasets = {}
@@ -39,6 +42,7 @@ def get_dataset_info_from_summary(summary_path: str, root_dir: str, nodes_shp_pa
             'hec_ras_file_path': os.path.join(root_dir, 'raw', hec_ras_path),
             'node_shp_path': nodes_shp_path,
             'edge_shp_path': edges_shp_path,
+            'dem_path': dem_path,
         }
     return datasets
 
@@ -52,9 +56,11 @@ def create_pyg_dataset(dataset_info: dict,
         hec_ras_file_path = paths['hec_ras_file_path']
         node_shp_path = paths['node_shp_path']
         edge_shp_path = paths['edge_shp_path']
+        dem_path = paths['dem_path']
         dataset_features = get_dataset_features(hec_ras_file_path,
                                                 node_shp_path,
                                                 edge_shp_path,
+                                                dem_path,
                                                 spin_up_timesteps,
                                                 ts_from_peak_water_depth,
                                                 downsample_interval)
@@ -140,54 +146,26 @@ def get_cell_velocity(hec_ras_filepath: str, node_shp_filepath: str, perimeter_n
 
     return torch.FloatTensor(cell_velocity_x), torch.FloatTensor(cell_velocity_y)
 
-def get_cell_slope(node_shp_path: str, edge_index: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
-    pos = get_cell_position(node_shp_path)
-    elevation = get_cell_elevation(node_shp_path)
-    num_nodes = edge_index.max().item() + 1
+def get_cell_slope(node_shp_path: str, dem_path: str) -> tuple[torch.Tensor, torch.Tensor]:
+    position = get_cell_position(node_shp_path)
 
-    slope_x = np.zeros(num_nodes)
-    slope_y = np.zeros(num_nodes)
+    dem_folder = os.path.dirname(dem_path)
+    filled_dem_path = os.path.join(dem_folder, 'filled_dem.tif')
+    filled_dem = get_filled_dem(dem_path, filled_dem_path)
 
-    for cell_i in range(num_nodes):
-        # Find all edges connected to this cell
-        cell_edge_mask = (edge_index[0] == cell_i) | (edge_index[1] == cell_i)
-        cell_edge_idx = cell_edge_mask.nonzero().squeeze(-1)
+    slope_dem_path = os.path.join(dem_folder, 'slope_dem.tif')
+    slope_magnitude = get_slope(filled_dem, slope_dem_path, position)
 
-        if cell_edge_idx.numel() == 0:
-            continue
+    aspect_dem_path = os.path.join(dem_folder, 'aspect_dem.tif')
+    # Slope direction, measured clockwise from North in degrees
+    aspect = get_aspect(filled_dem, aspect_dem_path, position)
 
-        # Get neighboring cells
-        neighbor_cells = []
-        for edge_idx in cell_edge_idx:
-            if edge_index[0, edge_idx] == cell_i:
-                neighbor_cells.append(edge_index[1, edge_idx].item())
-            else:
-                neighbor_cells.append(edge_index[0, edge_idx].item())
+    # Convert to radians
+    slope_rad = np.radians(slope_magnitude)
+    aspect_rad = np.radians(aspect)
 
-        # Compute slopes for each neighboring connection
-        slopes_x = []
-        slopes_y = []
-
-        for neighbor_idx in neighbor_cells:
-            # Calculate position differences
-            dx = pos[neighbor_idx, 0] - pos[cell_i, 0]
-            dy = pos[neighbor_idx, 1] - pos[cell_i, 1]
-            dz = elevation[neighbor_idx] - elevation[cell_i]
-
-            # Calculate horizontal distance
-            dist_xy = np.sqrt(dx**2 + dy**2)
-
-            if dist_xy > 0:
-                # Slope components: dz/dx and dz/dy
-                # Using chain rule: dz/dx = (dz/dist) * (dx/dist)
-                slope_magnitude = dz / dist_xy
-                slopes_x.append(slope_magnitude * (dx / dist_xy))
-                slopes_y.append(slope_magnitude * (dy / dist_xy))
-
-        # Average slopes from all neighbors
-        if len(slopes_x) > 0:
-            slope_x[cell_i] = np.mean(slopes_x)
-            slope_y[cell_i] = np.mean(slopes_y)
+    slope_x = np.tan(slope_rad) * np.sin(aspect_rad)
+    slope_y = np.tan(slope_rad) * np.cos(aspect_rad)
 
     return torch.FloatTensor(slope_x), torch.FloatTensor(slope_y)
 
@@ -199,6 +177,7 @@ def get_edge_relative_distance(pos: torch.Tensor, edge_index: torch.Tensor) -> t
 def get_dataset_features(hec_ras_file_path: str,
                          node_shp_path: str,
                          edge_shp_path: str,
+                         dem_path: str,
                          spin_up_timesteps: int = None,
                          ts_from_peak_water_depth: int = None,
                          downsample_interval: int = None) -> dict:
@@ -214,7 +193,7 @@ def get_dataset_features(hec_ras_file_path: str,
     # Edge Shapefile data retrieval
     edge_index = torch.LongTensor(get_edge_index(edge_shp_path))
     edge_distance = torch.FloatTensor(get_edge_length(edge_shp_path))
-    slope_x, slope_y = get_cell_slope(node_shp_path, edge_index)
+    slope_x, slope_y = get_cell_slope(node_shp_path, dem_path)
 
     # Convert edges to undirected
     edge_index = to_undirected(edge_index)
@@ -287,11 +266,13 @@ def main():
     train_datasets = get_dataset_info_from_summary(info['train_summary_path'],
                                                    root_dir,
                                                    info['nodes_shp_path'],
-                                                   info['edges_shp_path'])
+                                                   info['edges_shp_path'],
+                                                   info['dem_path'])
     test_datasets = get_dataset_info_from_summary(info['test_summary_path'],
                                                   root_dir,
                                                   info['nodes_shp_path'],
-                                                  info['edges_shp_path'])
+                                                  info['edges_shp_path'],
+                                                  info['dem_path'])
 
     create_dataset_folders(dataset_folder=base_dataset_folder)
 

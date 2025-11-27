@@ -100,6 +100,8 @@ def main(config, model_path: str, output_path: list[str]):
         validation_stats.print_stats_summary()
 
         # Prediction time
+        total_inference_time = spatial_analyser.prediction_times[dataset_idx]
+        print(f'Total inference time for dataset: {total_inference_time:4f} seconds', flush=True)
         inference_pred_time = spatial_analyser.prediction_times[dataset_idx] / n_timesteps
         print(f'Inference time for one timestep: {inference_pred_time:4f} seconds', flush=True)
 

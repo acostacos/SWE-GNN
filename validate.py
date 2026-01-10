@@ -93,10 +93,9 @@ def main(config, model_path: str, output_path: list[str]):
                 water_depth_pred = torch.clip(water_depth_pred, min=0)
                 water_depth_target = torch.clip(water_depth_target, min=0)
 
-            validation_stats.update_stats_for_epoch(water_depth_pred.cpu(),
-                                                    water_depth_target.cpu(),
-                                                    water_threshold=0.05)
+            validation_stats.add_pred_for_timestep(pred=water_depth_pred.cpu(), target=water_depth_target.cpu())
 
+        validation_stats.compute_overall_stats(water_threshold=0.05)
         validation_stats.print_stats_summary()
 
         # Prediction time
